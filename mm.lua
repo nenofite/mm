@@ -1,11 +1,148 @@
-local INDENT = "   "
-local CYCLE = "<cycle>"
 local METATABLE = "<metatable>"
 
 local STR_HALF = 30
 local MAX_STR_LEN = STR_HALF * 2
 
 
+--
+-- Context
+--
+
+
+local function new_context ()
+  return {
+    functions_occur = {},
+    functions_named = {},
+    next_function_name = -- TODO
+
+    tables_occur = {},
+    tables_named = {},
+    next_table_name = -- TODO
+
+    prev_indent = '',
+    next_indent = INDENT,
+    line_len = 0,
+    max_width = 80,
+
+    result = ''
+  }
+end
+
+
+--
+-- Translating into pieces
+--
+
+-- Translaters take any Lua value and create pieces to represent them.
+
+-- Some values should only be serialized once, both to prevent cycles and to 
+-- prevent redundancy. Or in other cases, these values cannot be serialized 
+-- (such as functions) but if they appear multiple times we want to express 
+-- that they are the same.
+--
+-- When a translater encounters such a value for the first time, it is 
+-- registered in the context in `TYPEs_occur`. If it is serializable, like a 
+-- table, then it is translated as usual. However, an additional `id` field in 
+-- the frame points to the original table. If it is unserializable, like a 
+-- function, then it is put in a `ref` field of a plain table.
+--
+-- When a translater encounters such a value again, for the second, third, 
+-- fourth, etc. time, then it requests and assigns a name to that value. Then 
+-- it puts the value into the `ref` field of a plain table, without even trying 
+-- to serialize it.
+--
+-- In the cleaning stage, these `id` fields and `ref` fields are replaced with 
+-- their names.
+
+local translaters = {}
+local translate
+
+
+function translate (val, ctx)
+  -- Try to find a type-specific translater.
+  local by_type = translaters [type (val)]
+
+  if by_type then
+    -- If there is a type-specific translater, call it.
+    return by_type (val, ctx)
+  else
+    -- Otherwise just return the built-in tostring.
+    return tostring (val)
+  end
+end
+
+
+function translaters ['function'] (val, ctx)
+  -- Check whether we've already encountered this function.
+  if ctx.functions_occur [val] then
+    -- We have; give it a name.
+    ctx.functions_named [val] = ctx.next_function_name ()
+  else
+    -- We haven't; mark it as encountered.
+    ctx.functions_occur [val] = true
+  end
+
+  -- Return the unserialized function.
+  return { ref = val }
+end
+
+
+function translaters.table (val, ctx)
+  -- Check whether we've already encountered this table.
+  if ctx.tables_occur [val] then
+    -- We have; give it a name.
+    ctx.tables_named [val] = ctx.next_table_name ()
+
+    -- Return the unserialized table.
+    return { ref = val }
+  else
+    -- We haven't; mark it as encountered.
+    ctx.functions_occur [val] = true
+
+    -- Construct the frame for this table.
+    local result = {
+      id = val,
+      bracket = { "{", ",", "}" }
+    }
+
+    -- Represent the metatable, if present.
+    local mt = getmetatable (val)
+    if mt then
+      table.insert (result, { METATABLE, "=", translate (mt) })
+    end
+
+    -- Represent the contents.
+    for k, v in pairs (val) do
+      table.insert (result, { translate (k), "=", translate (v) })
+    end
+
+    return result
+  end
+end
+
+
+function translaters.string (val, ctx)
+  if #val <= MAX_STR_LEN then
+    return string.format ('%q', val)
+  else
+    return string.format ('%q...%q',
+      string.sub (val, 1, STR_HALF),
+      string.sub (val, -STR_HALF))
+  end
+end
+
+
+--
+-- Cleaning frames
+--
+
+
+--
+-- Displaying frames
+--
+
+
+local INDENT = "   "
 local BOPEN, BSEP, BCLOSE = 1, 2, 3
 
 
@@ -17,36 +154,11 @@ local BOPEN, BSEP, BCLOSE = 1, 2, 3
 --   a = 1
 -- }.
 
-test_frame = {
-  bracket = { "<A> {", ",", "}" },
-  { "<metatable>", "=", "{}" },
-  { "1", "=", "1" },
-  {
-    {
-      bracket = { "{", ",", "}" },
-      { "a","=","1" }
-    },
-    "=",
-    "<table A>"
-  },
-  {
-    '"foo dum"',
-    "=",
-    {
-      bracket = { "{", ",", "}" },
-      { 
-        '"faoeliaorecihaolerreci"..."loalorechmmaoaoeiaoeiaoeiaoeiaoeiaoeiaoeiaoeiaoeiaoeikcoceiholer"', 
-        "=", "true" },
-      { '"lrocemolericoemaoeioei"..."lrocemolericoemaoeioei"', "=", "false" }
-    }
-  }
-}
 
---~ local min_len
---~ 
---~ local display, display_frame, display_sequence, display_string
---~ local display_frame_short, display_frame_long
---~ local new_context, newline, newline_no_indent, write, space_here, space_newline
+-- Declare all the local functions first, so they can refer to each other.
+local min_len, display, display_frame, display_sequence, display_string,
+      display_frame_short, display_frame_long, newline, newline_no_indent, 
+      write, space_here, space_newline
 
 
 -- Dispatch based on the piece's type.
@@ -66,6 +178,12 @@ end
 
 -- Display a frame.
 function display_frame (frame, ctx)
+  if #frame == 0 then
+    -- If the frame is empty, just display it like a string.
+    local str = frame.bracket[BOPEN] .. frame.bracket[BCLOSE]
+    return display_string (str, ctx)
+  end
+
   local ml = min_len (frame)
 
   -- Try to fit the frame short-form on this line.
@@ -162,20 +280,22 @@ end
 
 
 function display_sequence (piece, ctx)
-  -- Display the first child.
-  display (piece [1], ctx)
+  if #piece > 0 then
+    -- Display the first child.
+    display (piece [1], ctx)
 
-  -- For each following children:
-  for i = 2, #piece do
-    local child = piece [i]
+    -- For each following children:
+    for i = 2, #piece do
+      local child = piece [i]
 
-    -- If there's room, write a space.
-    if space_here (ctx) >= 1 then
-      write (" ", ctx)
+      -- If there's room, write a space.
+      if space_here (ctx) >= 1 then
+        write (" ", ctx)
+      end
+
+      -- Then display the child.
+      display (child, ctx)
     end
-
-    -- Then display the child.
-    display (child, ctx)
   end
 end
 
@@ -214,6 +334,11 @@ function min_len (piece, ctx)
   if piece.bracket then
     -- This is a frame.
 
+    -- If it's an empty frame, just the open and close brackets.
+    if #piece == 0 then
+      return #piece.bracket[BOPEN] + #piece.bracket[BCLOSE]
+    end
+
     -- Open and close brackets, plus a space for each.
     result = result + #piece.bracket[BOPEN] + #piece.bracket[BCLOSE] + 2
 
@@ -221,6 +346,11 @@ function min_len (piece, ctx)
     result = result + (#piece - 1) * (#piece.bracket[BSEP] + 1)
   else
     -- This is a sequence.
+
+    -- If it's an empty sequence, then nothing.
+    if #piece == 0 then
+      return 0
+    end
 
     -- A single space between each item.
     result = result + (#piece - 1)
@@ -233,23 +363,6 @@ function min_len (piece, ctx)
   end
 
   return result
-end
-
-
-function new_context ()
-  return {
-    functions_occur = {},
-    functions_named = {},
-    tables_occur = {},
-    tables_named = {},
-
-    prev_indent = '',
-    next_indent = INDENT,
-    line_len = 0,
-    max_width = 80,
-
-    result = ''
-  }
 end
 
 
@@ -282,7 +395,13 @@ function space_newline (ctx)
 end
 
 
-return nil
+--
+-- Main function
+--
+
+
+return function (val)
+end
 
 -- example frame
 --[[
