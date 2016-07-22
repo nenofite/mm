@@ -1,7 +1,82 @@
 local METATABLE = "<metatable>"
+local INDENT = "   "
+
+local BOPEN, BSEP, BCLOSE = 1, 2, 3
 
 local STR_HALF = 30
 local MAX_STR_LEN = STR_HALF * 2
+
+local FUNCTION_NAMES = {
+  "Theodora",
+  "Lizzette",
+  "Eleanora",
+  "Alexandra",
+  "Dulce",
+  "Arletta",
+  "Vanna",
+  "Laurette",
+  "Tamara",
+  "Shonna",
+  "Ione",
+  "Ursula",
+  "Serena",
+  "Elza",
+  "Estrella",
+  "Jerrica",
+  "Ranae",
+  "Chieko",
+  "Terra",
+  "Candelaria"
+}
+
+local TABLE_NAMES = {
+  "Lou",
+  "Oswaldo",
+  "Ruben",
+  "Jewel",
+  "Hilton",
+  "Mitchel",
+  "Frederic",
+  "Adolph",
+  "Lincoln",
+  "Joaquin",
+  "Eliseo",
+  "Randell",
+  "Burt",
+  "Felipe",
+  "Brock",
+  "Dorian",
+  "Huey",
+  "Duane",
+  "Lynwood",
+  "Claude"
+}
+
+
+--
+-- Namers
+--
+
+
+function new_namer (list)
+  local index = 1
+  local suffix = 1
+  return function ()
+    local result = list [index]
+
+    if suffix > 1 then
+      result = result .. " " .. tostring (suffix)
+    end
+
+    index = index + 1
+    if index > #list then
+      index = 1
+      suffix = suffix + 1
+    end
+
+    return result
+  end
+end
 
 
 --
@@ -14,8 +89,8 @@ local function new_context ()
     named = {},
     occur = {},
 
-    next_function_name = -- TODO
-    next_table_name = -- TODO
+    next_function_name = new_namer (FUNCTION_NAMES),
+    next_table_name = new_namer (TABLE_NAMES),
 
     prev_indent = '',
     next_indent = INDENT,
@@ -70,7 +145,7 @@ function translate (val, ctx)
 end
 
 
-function translaters ['function'] (val, ctx)
+translaters ['function'] = function (val, ctx)
   -- Check whether we've already encountered this function.
   if ctx.occur [val] then
     -- We have; give it a name.
@@ -106,12 +181,12 @@ function translaters.table (val, ctx)
     -- Represent the metatable, if present.
     local mt = getmetatable (val)
     if mt then
-      table.insert (result, { METATABLE, "=", translate (mt) })
+      table.insert (result, { METATABLE, "=", translate (mt, ctx) })
     end
 
     -- Represent the contents.
     for k, v in pairs (val) do
-      table.insert (result, { translate (k), "=", translate (v) })
+      table.insert (result, { translate (k, ctx), "=", translate (v, ctx) })
     end
 
     return result
@@ -181,10 +256,6 @@ end
 --
 -- Displaying pieces
 --
-
-
-local INDENT = "   "
-local BOPEN, BSEP, BCLOSE = 1, 2, 3
 
 
 -- Pieces are either frames (with brackets), sequences (no brackets), or 
@@ -442,6 +513,15 @@ end
 
 
 return function (val)
+  if val == nil then
+    print (nil)
+  else
+    local ctx = new_context ()
+    local piece = translate (val, ctx)
+    piece = clean (piece, ctx)
+    display (piece, ctx)
+    print (ctx.result)
+  end
 end
 
 -- example frame
