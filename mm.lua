@@ -11,12 +11,10 @@ local MAX_STR_LEN = STR_HALF * 2
 
 local function new_context ()
   return {
-    functions_occur = {},
-    functions_named = {},
-    next_function_name = -- TODO
+    named = {},
+    occur = {},
 
-    tables_occur = {},
-    tables_named = {},
+    next_function_name = -- TODO
     next_table_name = -- TODO
 
     prev_indent = '',
@@ -41,9 +39,9 @@ end
 -- that they are the same.
 --
 -- When a translater encounters such a value for the first time, it is 
--- registered in the context in `TYPEs_occur`. If it is serializable, like a 
--- table, then it is translated as usual. However, an additional `id` field in 
--- the frame points to the original table. If it is unserializable, like a 
+-- registered in the context in `occur`. If it is serializable, like a table, 
+-- then it is translated as usual. However, an additional `id` field in the 
+-- frame points to the original table. If it is unserializable, like a 
 -- function, then it is put in a `ref` field of a plain table.
 --
 -- When a translater encounters such a value again, for the second, third, 
@@ -74,12 +72,12 @@ end
 
 function translaters ['function'] (val, ctx)
   -- Check whether we've already encountered this function.
-  if ctx.functions_occur [val] then
+  if ctx.occur [val] then
     -- We have; give it a name.
-    ctx.functions_named [val] = ctx.next_function_name ()
+    ctx.named [val] = ctx.next_function_name ()
   else
     -- We haven't; mark it as encountered.
-    ctx.functions_occur [val] = true
+    ctx.occur [val] = true
   end
 
   -- Return the unserialized function.
@@ -89,15 +87,15 @@ end
 
 function translaters.table (val, ctx)
   -- Check whether we've already encountered this table.
-  if ctx.tables_occur [val] then
+  if ctx.occur [val] then
     -- We have; give it a name.
-    ctx.tables_named [val] = ctx.next_table_name ()
+    ctx.named [val] = ctx.next_table_name ()
 
     -- Return the unserialized table.
     return { ref = val }
   else
     -- We haven't; mark it as encountered.
-    ctx.functions_occur [val] = true
+    ctx.occur [val] = true
 
     -- Construct the frame for this table.
     local result = {
@@ -133,12 +131,55 @@ end
 
 
 --
--- Cleaning frames
+-- Cleaning pieces
 --
 
 
+local function clean (piece, ctx)
+  if type (piece) == 'table' then
+    -- Check if it's a ref.
+    if piece.ref then
+      local name = ctx.named [piece.ref]
+      if name then
+        return string.format ('<%s %s>', type (piece.ref), name)
+      else
+        return string.format ('<%s>', type (piece.ref))
+      end
+
+    -- Check if it's a frame with an id.
+    elseif piece.id then
+      local name = ctx.named [piece.id]
+      if name then
+        -- Update the open bracket to show the name.
+        piece.bracket[BOPEN] = string.format ('<%s> %s',
+          name,
+          piece.bracket[BOPEN])
+      end
+
+      -- Strip out the id field.
+      piece.id = nil
+
+      -- Clean each child.
+      for i, child in ipairs (piece) do
+        piece [i] = clean (child, ctx)
+      end
+      return piece
+
+    -- Otherwise it's a sequence, so clean each child.
+    else
+      for i, child in ipairs (piece) do
+        piece [i] = clean (child, ctx)
+      end
+      return piece
+    end
+  else
+    return piece
+  end
+end
+
+
 --
--- Displaying frames
+-- Displaying pieces
 --
 
 
