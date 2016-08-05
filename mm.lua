@@ -55,6 +55,32 @@ local TABLE_NAMES = {
   C.g .. "Claude"
 }
 
+-- Reserved Lua keywords, as a convenient look-up table.
+local RESERVED = {
+  ['and'] = true,
+  ['break'] = true,
+  ['do'] = true,
+  ['else'] = true,
+  ['elseif'] = true,
+  ['end'] = true,
+  ['false'] = true,
+  ['for'] = true,
+  ['function'] = true,
+  ['goto'] = true,
+  ['if'] = true,
+  ['in'] = true,
+  ['local'] = true,
+  ['nil'] = true,
+  ['not'] = true,
+  ['or'] = true,
+  ['repeat'] = true,
+  ['return'] = true,
+  ['then'] = true,
+  ['true'] = true,
+  ['until'] = true,
+  ['while'] = true
+}
+
 
 --
 -- Namers
@@ -128,7 +154,7 @@ end
 -- the piece.
 
 local translaters = {}
-local translate
+local translate, ident_friendly
 
 
 function translate (val, ctx)
@@ -177,17 +203,32 @@ function translaters.table (val, ctx)
       bracket = { C.br .. "{" .. C.e, ",", C.br .. "}" .. C.e }
     }
 
+    -- The equals-sign between key and value.
+    local eq = C.di .. "=" .. C.e
+
     -- Represent the metatable, if present.
     local mt = getmetatable (val)
     if mt then
-      table.insert (result,
-        { METATABLE, C.di .. "=" .. C.e, translate (mt, ctx) })
+      -- Translate the metatable.
+      mt = translate (mt, ctx)
+      table.insert (result, { METATABLE, eq, mt })
     end
 
     -- Represent the contents.
     for k, v in pairs (val) do
-      table.insert (result,
-        { translate (k, ctx), C.di .. "=" .. C.e, translate (v, ctx) })
+      -- If it is a string key which can be represented without quotes, leave 
+      -- it plain.
+      if ident_friendly (k) then
+        -- Leave the key as it is.
+      else
+        -- Otherwise translate the key.
+        k = translate (k, ctx)
+      end
+
+      -- Translate the value.
+      v = translate (v, ctx)
+
+      table.insert (result, { k, eq, v })
     end
 
     -- Wrap the result with its id.
@@ -213,6 +254,36 @@ end
 
 function translaters.number (val, ctx)
   return C.m .. C.br .. tostring (val) .. C.e
+end
+
+
+-- Check whether a value can be represented as a Lua identifier, without the 
+-- need for quotes or translation.
+--
+-- If the value is not a string, this immediately returns false. Otherwise, the 
+-- string must be a valid Lua name: a sequence of letters, digits, and 
+-- underscores that doesn't start with a digit and isn't a reserved keyword.
+--
+-- See http://www.lua.org/manual/5.3/manual.html#3.1
+function ident_friendly (val)
+  -- The value must be a string.
+  if type (val) ~= 'string' then
+    return false
+  end
+
+  if string.find (val, '^[_%a][_%a%d]*$') then
+    -- The value is a Lua name; check if it is reserved.
+    if RESERVED [val] then
+      -- The value is a resreved keyword.
+      return false
+    else
+      -- The value is a valid name.
+      return true
+    end
+  else
+    -- The value is not a Lua name.
+    return false
+  end
 end
 
 
