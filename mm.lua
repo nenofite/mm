@@ -1,7 +1,7 @@
 local C = require 'colors'
 
 
-local METATABLE = C.k .. C.it .. C._w .. "<metatable>" .. C.e
+local METATABLE = C.it .. C.w .. C._k .. "<metatable>" .. C.e
 local INDENT = "   "
 
 local BOPEN, BSEP, BCLOSE = 1, 2, 3
