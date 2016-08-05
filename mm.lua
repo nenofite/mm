@@ -110,25 +110,22 @@ end
 --
 
 -- Translaters take any Lua value and create pieces to represent them.
-
+--
 -- Some values should only be serialized once, both to prevent cycles and to 
 -- prevent redundancy. Or in other cases, these values cannot be serialized 
 -- (such as functions) but if they appear multiple times we want to express 
 -- that they are the same.
 --
 -- When a translater encounters such a value for the first time, it is 
--- registered in the context in `occur`. If it is serializable, like a table, 
--- then it is translated as usual. However, an additional `id` field in the 
--- frame points to the original table. If it is unserializable, like a 
--- function, then it is put in a `ref` field of a plain table.
+-- registered in the context in `occur`. The value is wrapped in a plain table 
+-- with the `id` field pointing to the original value. If the value is 
+-- serializable, such as a table, then the the `def` field contains the piece 
+-- to display. If it is unserializable or it is not the first time this value 
+-- has occurred, the `def` field is nil.
 --
--- When a translater encounters such a value again, for the second, third, 
--- fourth, etc. time, then it requests and assigns a name to that value. Then 
--- it puts the value into the `ref` field of a plain table, without even trying 
--- to serialize it.
---
--- In the cleaning stage, these `id` fields and `ref` fields are replaced with 
--- their names.
+-- In the cleaning stage, these `id` fields are replaced with their names. If a 
+-- `def` field is present, then a sequence is generated to define the name with 
+-- the piece.
 
 local translaters = {}
 local translate
@@ -159,7 +156,7 @@ translaters ['function'] = function (val, ctx)
   end
 
   -- Return the unserialized function.
-  return { ref = val }
+  return { id = val }
 end
 
 
@@ -170,14 +167,13 @@ function translaters.table (val, ctx)
     ctx.named [val] = ctx.next_table_name ()
 
     -- Return the unserialized table.
-    return { ref = val }
+    return { id = val }
   else
     -- We haven't; mark it as encountered.
     ctx.occur [val] = true
 
     -- Construct the frame for this table.
     local result = {
-      id = val,
       bracket = { C.br .. "{" .. C.e, ",", C.br .. "}" .. C.e }
     }
 
@@ -194,7 +190,8 @@ function translaters.table (val, ctx)
         { translate (k, ctx), C.di .. "=" .. C.e, translate (v, ctx) })
     end
 
-    return result
+    -- Wrap the result with its id.
+    return { id = val, def = result }
   end
 end
 
@@ -226,43 +223,51 @@ end
 
 local function clean (piece, ctx)
   if type (piece) == 'table' then
-    -- Check if it's a ref.
-    if piece.ref then
-      local name = ctx.named [piece.ref]
-      if name then
-        return string.format ('<%s %s>', type (piece.ref), name)
-      else
-        return string.format ('<%s>', type (piece.ref))
-      end
-
-    -- Check if it's a frame with an id.
-    elseif piece.id then
+    -- Check if it's an id reference.
+    if piece.id then
       local name = ctx.named [piece.id]
+      local def = piece.def
+
+      -- Check whether it has been given a name.
       if name then
-        -- Update the open bracket to show the name.
-        piece.bracket[BOPEN] = string.format ('<%s %s> %s',
-          type (piece.id),
-          name,
-          piece.bracket[BOPEN])
+        local header = "<" .. type (piece.id) .. " " .. name .. ">"
+        -- Named. Check whether the reference has a definition.
+        if def then
+          -- Create a sequence defining the name to the definition.
+          return { header, clean (piece.def, ctx) }
+        else
+          -- Show just the name.
+          return header
+        end
+      else
+        -- No name. Check whether the reference has a definition.
+        if def then
+          -- Display the definition without any header.
+          return clean (piece.def, ctx)
+        else
+          -- Display just the type.
+          return "<" .. type (piece.id) .. ">"
+        end
       end
 
-      -- Strip out the id field.
-      piece.id = nil
-
+    -- Check if it's a frame.
+    elseif piece.bracket then
       -- Clean each child.
       for i, child in ipairs (piece) do
         piece [i] = clean (child, ctx)
       end
       return piece
 
-    -- Otherwise it's a sequence, so clean each child.
+    -- Otherwise it's a sequence.
     else
+      -- Clean each child.
       for i, child in ipairs (piece) do
         piece [i] = clean (child, ctx)
       end
       return piece
     end
   else
+    -- It's a plain value, not a table; no cleaning is needed.
     return piece
   end
 end
