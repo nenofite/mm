@@ -195,13 +195,17 @@ end
 
 
 function translaters.string (val, ctx)
+  local result
   if #val <= MAX_STR_LEN then
-    return string.format ('%q', val)
+    result = string.format ('%q', val)
   else
-    return string.format ('%q...%q',
+    result = string.format ('%q...%q',
       string.sub (val, 1, STR_HALF),
       string.sub (val, -STR_HALF))
   end
+
+  result = string.gsub (result, '\n', 'n')
+  return result
 end
 
 
