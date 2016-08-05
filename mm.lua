@@ -1,4 +1,7 @@
-local METATABLE = "<metatable>"
+local C = require 'colors'
+
+
+local METATABLE = C.k .. C.it .. C._w .. "<metatable>" .. C.e
 local INDENT = "   "
 
 local BOPEN, BSEP, BCLOSE = 1, 2, 3
@@ -7,49 +10,49 @@ local STR_HALF = 30
 local MAX_STR_LEN = STR_HALF * 2
 
 local FUNCTION_NAMES = {
-  "Theodora",
-  "Lizzette",
-  "Eleanora",
-  "Alexandra",
-  "Dulce",
-  "Arletta",
-  "Vanna",
-  "Laurette",
-  "Tamara",
-  "Shonna",
-  "Ione",
-  "Ursula",
-  "Serena",
-  "Elza",
-  "Estrella",
-  "Jerrica",
-  "Ranae",
-  "Chieko",
-  "Terra",
-  "Candelaria"
+  C.r .. "Theodora",
+  C.g .. "Lizzette",
+  C.y .. "Eleanora",
+  C.b .. "Alexandra",
+  C.m .. "Dulce",
+  C.c .. "Arletta",
+  C.r .. "Vanna",
+  C.g .. "Laurette",
+  C.y .. "Tamara",
+  C.b .. "Shonna",
+  C.m .. "Ione",
+  C.c .. "Ursula",
+  C.r .. "Serena",
+  C.g .. "Elza",
+  C.y .. "Estrella",
+  C.b .. "Jerrica",
+  C.m .. "Ranae",
+  C.c .. "Chieko",
+  C.r .. "Terra",
+  C.g .. "Candelaria"
 }
 
 local TABLE_NAMES = {
-  "Lou",
-  "Oswaldo",
-  "Ruben",
-  "Jewel",
-  "Hilton",
-  "Mitchel",
-  "Frederic",
-  "Adolph",
-  "Lincoln",
-  "Joaquin",
-  "Eliseo",
-  "Randell",
-  "Burt",
-  "Felipe",
-  "Brock",
-  "Dorian",
-  "Huey",
-  "Duane",
-  "Lynwood",
-  "Claude"
+  C.r .. "Lou",
+  C.g .. "Oswaldo",
+  C.y .. "Ruben",
+  C.b .. "Jewel",
+  C.m .. "Hilton",
+  C.c .. "Mitchel",
+  C.r .. "Frederic",
+  C.g .. "Adolph",
+  C.y .. "Lincoln",
+  C.b .. "Joaquin",
+  C.m .. "Eliseo",
+  C.c .. "Randell",
+  C.r .. "Burt",
+  C.g .. "Felipe",
+  C.y .. "Brock",
+  C.b .. "Dorian",
+  C.m .. "Huey",
+  C.c .. "Duane",
+  C.r .. "Lynwood",
+  C.g .. "Claude"
 }
 
 
@@ -58,7 +61,7 @@ local TABLE_NAMES = {
 --
 
 
-function new_namer (list)
+local function new_namer (list)
   local index = 1
   local suffix = 1
   return function ()
@@ -74,7 +77,7 @@ function new_namer (list)
       suffix = suffix + 1
     end
 
-    return result
+    return result .. C.e
   end
 end
 
@@ -175,18 +178,20 @@ function translaters.table (val, ctx)
     -- Construct the frame for this table.
     local result = {
       id = val,
-      bracket = { "{", ",", "}" }
+      bracket = { C.br .. "{" .. C.e, ",", C.br .. "}" .. C.e }
     }
 
     -- Represent the metatable, if present.
     local mt = getmetatable (val)
     if mt then
-      table.insert (result, { METATABLE, "=", translate (mt, ctx) })
+      table.insert (result,
+        { METATABLE, C.di .. "=" .. C.e, translate (mt, ctx) })
     end
 
     -- Represent the contents.
     for k, v in pairs (val) do
-      table.insert (result, { translate (k, ctx), "=", translate (v, ctx) })
+      table.insert (result,
+        { translate (k, ctx), C.di .. "=" .. C.e, translate (v, ctx) })
     end
 
     return result
@@ -205,7 +210,12 @@ function translaters.string (val, ctx)
   end
 
   result = string.gsub (result, '\n', 'n')
-  return result
+  return C.k .. C._w .. result .. C.e
+end
+
+
+function translaters.number (val, ctx)
+  return C.m .. C.br .. tostring (val) .. C.e
 end
 
 
@@ -525,7 +535,7 @@ return function (val)
     local piece = translate (val, ctx)
     piece = clean (piece, ctx)
     display (piece, ctx)
-    print (ctx.result)
+    print (C.e .. ctx.result .. C.e)
   end
 end
 
