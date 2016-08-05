@@ -230,7 +230,8 @@ local function clean (piece, ctx)
       local name = ctx.named [piece.id]
       if name then
         -- Update the open bracket to show the name.
-        piece.bracket[BOPEN] = string.format ('<%s> %s',
+        piece.bracket[BOPEN] = string.format ('<%s %s> %s',
+          type (piece.id),
           name,
           piece.bracket[BOPEN])
       end
