@@ -174,8 +174,10 @@ end
 translaters ['function'] = function (val, ctx)
   -- Check whether we've already encountered this function.
   if ctx.occur [val] then
-    -- We have; give it a name.
-    ctx.named [val] = ctx.next_function_name ()
+    -- We have; give it a name if we haven't already.
+    if not ctx.named [val] then
+      ctx.named [val] = ctx.next_table_name ()
+    end
   else
     -- We haven't; mark it as encountered.
     ctx.occur [val] = true
@@ -189,8 +191,10 @@ end
 function translaters.table (val, ctx)
   -- Check whether we've already encountered this table.
   if ctx.occur [val] then
-    -- We have; give it a name.
-    ctx.named [val] = ctx.next_table_name ()
+    -- We have; give it a name if we haven't already.
+    if not ctx.named [val] then
+      ctx.named [val] = ctx.next_table_name ()
+    end
 
     -- Return the unserialized table.
     return { id = val }
