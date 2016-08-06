@@ -103,7 +103,7 @@ local function new_namer (list)
       suffix = suffix + 1
     end
 
-    return result .. C.e
+    return C.un .. result .. C.e
   end
 end
 
@@ -224,6 +224,7 @@ function translaters.table (val, ctx)
       -- it plain.
       if ident_friendly (k) then
         -- Leave the key as it is.
+        k = C.m .. k .. C.e
       else
         -- Otherwise translate the key.
         k = translate (k, ctx)
@@ -252,7 +253,7 @@ function translaters.string (val, ctx)
   end
 
   result = string.gsub (result, '\n', 'n')
-  return C.k .. C._w .. result .. C.e
+  return C.g .. result .. C.e
 end
 
 
@@ -305,7 +306,10 @@ local function clean (piece, ctx)
 
       -- Check whether it has been given a name.
       if name then
-        local header = "<" .. type (piece.id) .. " " .. name .. ">"
+        local header =
+          C.it .. "<" .. type (piece.id) .. " " .. C.e ..
+          name ..
+          C.it .. ">" .. C.e
         -- Named. Check whether the reference has a definition.
         if def then
           -- Create a sequence defining the name to the definition.
@@ -321,7 +325,7 @@ local function clean (piece, ctx)
           return clean (piece.def, ctx)
         else
           -- Display just the type.
-          return "<" .. type (piece.id) .. ">"
+          return C.it .. "<" .. type (piece.id) .. ">" .. C.e
         end
       end
 
