@@ -162,9 +162,25 @@ function translate (val, ctx)
   if by_type then
     -- If there is a type-specific translater, call it.
     return by_type (val, ctx)
+  end
+
+  -- Otherwise perform the default translation.
+
+  -- Check whether we've already encountered this value.
+  if ctx.occur [val] then
+    -- We have; give it a name if we haven't already.
+    if not ctx.named [val] then
+      ctx.named [val] = ctx.next_name ()
+    end
+
+    -- Return the value as a reference.
+    return { id = val }
   else
-    -- Otherwise just return the built-in tostring.
-    return tostring (val)
+    -- We haven't; mark it as encountered.
+    ctx.occur [val] = true
+
+    -- Return the value as a definition.
+    return { id = val, def = tostring (val) }
   end
 end
 
