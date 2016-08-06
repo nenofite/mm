@@ -1,7 +1,7 @@
 local C = require 'colors'
 
 
-local METATABLE = { "<metatable>", colors = C.it .. C.w .. C._k }
+local METATABLE = { "<metatable>", colors = C.it .. C.y }
 local INDENT = "   "
 
 -- The default sequence separator.
