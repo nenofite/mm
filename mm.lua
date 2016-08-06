@@ -1,5 +1,36 @@
-local C = require 'colors'
+-- Terminal color (and formatting) codes.
+local C = {
+  e = '\27[0m', -- reset
 
+  -- Text attributes.
+  br = '\27[1m', -- bright
+  di = '\27[2m', -- dim
+  it = '\27[3m', -- italics
+  un = '\27[4m', -- underscore
+  bl = '\27[5m', -- blink
+  re = '\27[7m', -- reverse
+  hi = '\27[8m', -- hidden
+
+  -- Text colors.
+  k = '\27[30m', -- black
+  r = '\27[31m', -- red
+  g = '\27[32m', -- green
+  y = '\27[33m', -- yellow
+  b = '\27[34m', -- blue
+  m = '\27[35m', -- magenta
+  c = '\27[36m', -- cyan
+  w = '\27[37m', -- white
+
+  -- Background colors.
+  _k = '\27[40m', -- black
+  _r = '\27[41m', -- red
+  _g = '\27[42m', -- green
+  _y = '\27[43m', -- yellow
+  _b = '\27[44m', -- blue
+  _m = '\27[45m', -- magenta
+  _c = '\27[46m', -- cyan
+  _w = '\27[47m'  -- white
+}
 
 local METATABLE = { "<metatable>", colors = C.it .. C.y }
 local INDENT = "   "
