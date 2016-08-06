@@ -4,58 +4,49 @@ local C = require 'colors'
 local METATABLE = { "<metatable>", colors = C.it .. C.w .. C._k }
 local INDENT = "   "
 
+-- The default sequence separator.
+local SEP = " "
+
 local BOPEN, BSEP, BCLOSE = 1, 2, 3
+
+-- The default frame brackets and separator.
+local BRACKETS = {
+  { "{", colors = C.br },
+  ",",
+  { "}", colors = C.br }
+}
 
 local STR_HALF = 30
 local MAX_STR_LEN = STR_HALF * 2
 
-local FUNCTION_NAMES = {
-  C.r .. "Theodora",
-  C.g .. "Lizzette",
-  C.y .. "Eleanora",
-  C.b .. "Alexandra",
-  C.m .. "Dulce",
-  C.c .. "Arletta",
-  C.r .. "Vanna",
-  C.g .. "Laurette",
-  C.y .. "Tamara",
-  C.b .. "Shonna",
-  C.m .. "Ione",
-  C.c .. "Ursula",
-  C.r .. "Serena",
-  C.g .. "Elza",
-  C.y .. "Estrella",
-  C.b .. "Jerrica",
-  C.m .. "Ranae",
-  C.c .. "Chieko",
-  C.r .. "Terra",
-  C.g .. "Candelaria"
+-- Names to use for named references.
+local NAMES = {
+  "Theodora",
+  "Lizzette",
+  "Eleanora",
+  "Alexandra",
+  "Dulce",
+  "Arletta",
+  "Vanna",
+  "Laurette",
+  "Tamara",
+  "Shonna",
+  "Ione",
+  "Ursula",
+  "Serena",
+  "Elza",
+  "Estrella",
+  "Jerrica",
+  "Ranae",
+  "Chieko",
+  "Terra",
+  "Candelaria"
 }
 
-local TABLE_NAMES = {
-  C.r .. "Lou",
-  C.g .. "Oswaldo",
-  C.y .. "Ruben",
-  C.b .. "Jewel",
-  C.m .. "Hilton",
-  C.c .. "Mitchel",
-  C.r .. "Frederic",
-  C.g .. "Adolph",
-  C.y .. "Lincoln",
-  C.b .. "Joaquin",
-  C.m .. "Eliseo",
-  C.c .. "Randell",
-  C.r .. "Burt",
-  C.g .. "Felipe",
-  C.y .. "Brock",
-  C.b .. "Dorian",
-  C.m .. "Huey",
-  C.c .. "Duane",
-  C.r .. "Lynwood",
-  C.g .. "Claude"
-}
+-- Colors to use for named references. Don't use black nor white.
+local NAME_COLORS = { C.r, C.g, C.y, C.b, C.m, C.c }
 
--- Reserved Lua keywords, as a convenient look-up table.
+-- Reserved Lua keywords as a convenient look-up table.
 local RESERVED = {
   ['and'] = true,
   ['break'] = true,
@@ -86,24 +77,33 @@ local RESERVED = {
 -- Namers
 --
 
-
-local function new_namer (list)
+local function new_namer ()
   local index = 1
   local suffix = 1
-  return function ()
-    local result = list [index]
+  local color_index = 1
 
+  return function ()
+    -- Pick the name.
+    local result = NAMES [index]
     if suffix > 1 then
       result = result .. " " .. tostring (suffix)
     end
 
     index = index + 1
-    if index > #list then
+    if index > #NAMES then
       index = 1
       suffix = suffix + 1
     end
 
-    return C.un .. result .. C.e -- TODO
+    -- Pick the color.
+    local color = NAME_COLORS [color_index]
+
+    color_index = color_index + 1
+    if color_index > #NAME_COLORS then
+      color_index = 1
+    end
+
+    return { result, colors = C.un .. color }
   end
 end
 
@@ -115,11 +115,9 @@ end
 
 local function new_context ()
   return {
-    named = {},
     occur = {},
-
-    next_function_name = new_namer (FUNCTION_NAMES),
-    next_table_name = new_namer (TABLE_NAMES),
+    named = {},
+    next_name = new_namer (),
 
     prev_indent = '',
     next_indent = INDENT,
@@ -176,7 +174,7 @@ translaters ['function'] = function (val, ctx)
   if ctx.occur [val] then
     -- We have; give it a name if we haven't already.
     if not ctx.named [val] then
-      ctx.named [val] = ctx.next_table_name ()
+      ctx.named [val] = ctx.next_name ()
     end
   else
     -- We haven't; mark it as encountered.
@@ -193,7 +191,7 @@ function translaters.table (val, ctx)
   if ctx.occur [val] then
     -- We have; give it a name if we haven't already.
     if not ctx.named [val] then
-      ctx.named [val] = ctx.next_table_name ()
+      ctx.named [val] = ctx.next_name ()
     end
 
     -- Return the unserialized table.
@@ -204,7 +202,7 @@ function translaters.table (val, ctx)
 
     -- Construct the frame for this table.
     local result = {
-      bracket = { "{", ",", "}" }
+      bracket = BRACKETS
     }
 
     -- The equals-sign between key and value.
@@ -307,8 +305,10 @@ local function clean (piece, ctx)
       -- Check whether it has been given a name.
       if name then
         local header = {
-          "<" .. type (piece.id) .. " " .. name .. ">",
-          colors = C.it
+          "<", type (piece.id), " ", name, ">",
+          colors = C.it,
+          sep = '',
+          tight = true
         }
         -- Named. Check whether the reference has a definition.
         if def then
@@ -325,7 +325,12 @@ local function clean (piece, ctx)
           return clean (piece.def, ctx)
         else
           -- Display just the type.
-          return { "<" .. type (piece.id) .. ">", colors = C.it }
+          return {
+            "<", type (piece.id), ">",
+            colors = C.it,
+            sep = '',
+            tight = true
+          }
         end
       end
 
@@ -390,9 +395,13 @@ end
 -- Display a frame.
 function display_frame (frame, ctx)
   if #frame == 0 then
-    -- If the frame is empty, just display it like a string.
-    local str = frame.bracket[BOPEN] .. frame.bracket[BCLOSE]
-    return display_string (str, ctx)
+    -- If the frame is empty, just display the brackets.
+    local str = {
+      frame.bracket [BOPEN], frame.bracket [BCLOSE],
+      sep = '',
+      tight = true
+    }
+    return display (str, ctx)
   end
 
   local ml = min_len (frame)
@@ -418,7 +427,8 @@ function display_frame_short (frame, ctx)
   -- length checking (it's already been done for us).
 
   -- Write the open bracket.
-  write (frame.bracket[BOPEN] .. " ", ctx)
+  display (frame.bracket [BOPEN], ctx)
+  write (" ", ctx)
 
   -- Display the first child.
   display (frame [1], ctx)
@@ -428,14 +438,16 @@ function display_frame_short (frame, ctx)
     local child = frame [i]
 
     -- Write the separator.
-    write (frame.bracket[BSEP] .. " ", ctx)
+    display (frame.bracket [BSEP], ctx)
+    write (" ", ctx)
 
     -- Display the child.
     display (child, ctx)
   end
 
   -- Write the close bracket.
-  write (" " .. frame.bracket[BCLOSE], ctx)
+  write (" ", ctx)
+  display (frame.bracket [BCLOSE], ctx)
 end
 
 
@@ -444,8 +456,8 @@ function display_frame_long (frame, ctx)
   local old_old_indent = ctx.prev_indent
   local old_indent = ctx.next_indent
 
-  -- Display the open bracket as a string piece, so it will wrap if needed.
-  display_string (frame.bracket[BOPEN], ctx)
+  -- Display the open bracket.
+  display (frame.bracket [BOPEN], ctx)
 
   -- Increase the indentation.
   ctx.prev_indent = old_indent
@@ -463,7 +475,7 @@ function display_frame_long (frame, ctx)
     display (child, ctx)
 
     -- Write the separator.
-    write (frame.bracket[BSEP], ctx)
+    display (frame.bracket [BSEP], ctx)
   end
 
   -- For the last child...
@@ -482,7 +494,7 @@ function display_frame_long (frame, ctx)
   -- Write the close bracket.
   newline_no_indent (ctx)
   write (old_old_indent, ctx)
-  write (frame.bracket[BCLOSE], ctx)
+  display (frame.bracket [BCLOSE], ctx)
 
   -- Return to the old indentation.
   ctx.prev_indent = old_old_indent
@@ -492,6 +504,18 @@ end
 
 function display_sequence (piece, ctx)
   if #piece > 0 then
+    -- Check if this is a tight sequence.
+    if piece.tight then
+      -- Try to fit the entire sequence on one line.
+      local ml = min_len (piece, ctx)
+
+      -- If it won't fit here, but it would fit on the next line, then write it 
+      -- on the next line; otherwise, write it here.
+      if ml > space_here (ctx) and ml <= space_newline (ctx) then
+        newline (ctx)
+      end
+    end
+
     -- Apply the colors, if given.
     if piece.colors then
       write_nolength (piece.colors, ctx)
@@ -504,10 +528,13 @@ function display_sequence (piece, ctx)
     for i = 2, #piece do
       local child = piece [i]
 
-      -- If there's room, write a space.
-      if space_here (ctx) >= 1 then
-        write (" ", ctx)
+      -- Apply the colors, if given.
+      if piece.colors then
+        write_nolength (piece.colors, ctx)
       end
+
+      -- Write a separator.
+      write (piece.sep or SEP, ctx)
 
       -- Then display the child.
       display (child, ctx)
@@ -524,21 +551,13 @@ end
 function display_string (piece, ctx)
   local ml = min_len (piece)
 
-  -- Check whether the string will fit on this line.
-  if ml <= space_here (ctx) then
-    -- It will fit; write it.
-    write (piece, ctx)
-
-  -- It won't fit; try it on the next line.
-  elseif ml <= space_newline (ctx) then
+  -- If it won't fit here, but it would fit on the next line, then write it on 
+  -- the next line; otherwise, write it here.
+  if ml > space_here (ctx) and ml <= space_newline (ctx) then
     newline (ctx)
-    write (piece, ctx)
-
-  -- It won't fit on either line; write it on the original line (and let it 
-  -- overflow).
-  else
-    write (piece, ctx)
   end
+
+  write (piece, ctx)
 end
 
 
@@ -557,14 +576,15 @@ function min_len (piece, ctx)
 
     -- If it's an empty frame, just the open and close brackets.
     if #piece == 0 then
-      return #piece.bracket[BOPEN] + #piece.bracket[BCLOSE]
+      return min_len (piece.bracket [BOPEN]) + min_len (piece.bracket [BCLOSE])
     end
 
     -- Open and close brackets, plus a space for each.
-    result = result + #piece.bracket[BOPEN] + #piece.bracket[BCLOSE] + 2
+    result = result + min_len (piece.bracket [BOPEN]) +
+      min_len (piece.bracket [BCLOSE]) + 2
 
     -- A separator between each item, plus a space for each.
-    result = result + (#piece - 1) * (#piece.bracket[BSEP] + 1)
+    result = result + (#piece - 1) * (min_len (piece.bracket [BSEP]) + 1)
   else
     -- This is a sequence.
 
@@ -573,8 +593,8 @@ function min_len (piece, ctx)
       return 0
     end
 
-    -- A single space between each item.
-    result = result + (#piece - 1)
+    -- A single separator between each item.
+    result = result + (#piece - 1) * #(piece.sep or SEP)
   end
 
   -- For both frames and sequences:
