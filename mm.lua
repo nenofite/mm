@@ -1,7 +1,7 @@
 local C = require 'colors'
 
 
-local METATABLE = C.it .. C.w .. C._k .. "<metatable>" .. C.e
+local METATABLE = { "<metatable>", colors = C.it .. C.w .. C._k }
 local INDENT = "   "
 
 local BOPEN, BSEP, BCLOSE = 1, 2, 3
@@ -103,7 +103,7 @@ local function new_namer (list)
       suffix = suffix + 1
     end
 
-    return C.un .. result .. C.e
+    return C.un .. result .. C.e -- TODO
   end
 end
 
@@ -204,11 +204,11 @@ function translaters.table (val, ctx)
 
     -- Construct the frame for this table.
     local result = {
-      bracket = { C.br .. "{" .. C.e, ",", C.br .. "}" .. C.e }
+      bracket = { "{", ",", "}" }
     }
 
     -- The equals-sign between key and value.
-    local eq = C.di .. "=" .. C.e
+    local eq = { "=", colors = C.di }
 
     -- Represent the metatable, if present.
     local mt = getmetatable (val)
@@ -224,7 +224,7 @@ function translaters.table (val, ctx)
       -- it plain.
       if ident_friendly (k) then
         -- Leave the key as it is.
-        k = C.m .. k .. C.e
+        k = { k, colors = C.m }
       else
         -- Otherwise translate the key.
         k = translate (k, ctx)
@@ -253,12 +253,12 @@ function translaters.string (val, ctx)
   end
 
   result = string.gsub (result, '\n', 'n')
-  return C.g .. result .. C.e
+  return { result, colors = C.g }
 end
 
 
 function translaters.number (val, ctx)
-  return C.m .. C.br .. tostring (val) .. C.e
+  return { tostring (val), colors = C.m .. C.br }
 end
 
 
@@ -306,10 +306,10 @@ local function clean (piece, ctx)
 
       -- Check whether it has been given a name.
       if name then
-        local header =
-          C.it .. "<" .. type (piece.id) .. " " .. C.e ..
-          name ..
-          C.it .. ">" .. C.e
+        local header = {
+          "<" .. type (piece.id) .. " " .. name .. ">",
+          colors = C.it
+        }
         -- Named. Check whether the reference has a definition.
         if def then
           -- Create a sequence defining the name to the definition.
@@ -325,7 +325,7 @@ local function clean (piece, ctx)
           return clean (piece.def, ctx)
         else
           -- Display just the type.
-          return C.it .. "<" .. type (piece.id) .. ">" .. C.e
+          return { "<" .. type (piece.id) .. ">", colors = C.it }
         end
       end
 
@@ -492,6 +492,11 @@ end
 
 function display_sequence (piece, ctx)
   if #piece > 0 then
+    -- Apply the colors, if given.
+    if piece.colors then
+      write_nolength (piece.colors, ctx)
+    end
+
     -- Display the first child.
     display (piece [1], ctx)
 
@@ -506,6 +511,11 @@ function display_sequence (piece, ctx)
 
       -- Then display the child.
       display (child, ctx)
+    end
+
+    -- Reset the colors.
+    if piece.colors then
+      write_nolength (C.e, ctx)
     end
   end
 end
@@ -593,6 +603,11 @@ end
 function write (str, ctx)
   ctx.result = ctx.result .. str
   ctx.line_len = ctx.line_len + #str
+end
+
+
+function write_nolength (str, ctx)
+  ctx.result = ctx.result .. str
 end
 
 
