@@ -38,6 +38,8 @@ local INDENT = "   "
 -- The default sequence separator.
 local SEP = " "
 
+-- The open and close brackets can be any piece (notably, a sequence with 
+-- colors). The separator must be a plain string.
 local BOPEN, BSEP, BCLOSE = 1, 2, 3
 
 -- The default frame brackets and separator.
@@ -153,7 +155,7 @@ local function new_context ()
     prev_indent = '',
     next_indent = INDENT,
     line_len = 0,
-    max_width = 80,
+    max_width = 78,
 
     result = ''
   }
@@ -485,7 +487,7 @@ function display_frame_short (frame, ctx)
     local child = frame [i]
 
     -- Write the separator.
-    display (frame.bracket [BSEP], ctx)
+    write (frame.bracket [BSEP], ctx)
     write (" ", ctx)
 
     -- Display the child.
@@ -522,7 +524,7 @@ function display_frame_long (frame, ctx)
     display (child, ctx)
 
     -- Write the separator.
-    display (frame.bracket [BSEP], ctx)
+    write (frame.bracket [BSEP], ctx)
   end
 
   -- For the last child...
@@ -631,7 +633,7 @@ function min_len (piece, ctx)
       min_len (piece.bracket [BCLOSE]) + 2
 
     -- A separator between each item, plus a space for each.
-    result = result + (#piece - 1) * (min_len (piece.bracket [BSEP]) + 1)
+    result = result + (#piece - 1) * (#piece.bracket[BSEP] + 1)
   else
     -- This is a sequence.
 
