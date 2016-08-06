@@ -423,7 +423,7 @@ end
 -- Declare all the local functions first, so they can refer to each other.
 local min_len, display, display_frame, display_sequence, display_string,
       display_frame_short, display_frame_long, newline, newline_no_indent, 
-      write, space_here, space_newline
+      write, write_nolength, space_here, space_newline
 
 
 -- Dispatch based on the piece's type.
