@@ -706,32 +706,3 @@ return function (val)
     print (C.e .. ctx.result .. C.e)
   end
 end
-
--- example frame
---[[
-
-to show:
-<A> {
-  <metatable> = {},
-  1 = 1,
-  { a = 1 } = <table A>,
-  "foo dum" = {
-    "faoeliaorecihaolerreci"..."loalorechmmkcoceiholer" = true,
-    "lrocemolericoemaoeioei"..."lrocemolericoemaoeioei" = false
-  }
-}
-
-frame:
-
-{
-  bracket = { "<A> {", ", ", "}" },
-  { "<metatable>", "=", "{}" },
-  { "1", "=", "1" },
-  { { [brackets], { "a","=","1" } }, "=", "<table A>" },
-  { '"foo dum"', "=", { [brackets],
-    { '"faoeliaorecihaolerreci"..."loalorechmmkcoceiholer"', "=", "true" },
-    { '"lrocemolericoemaoeioei"..."lrocemolericoemaoeioei"', "=", "false" }
-  } }
-}
-
-]]
