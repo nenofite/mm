@@ -1,5 +1,7 @@
 # mm: a delicious Lua inspector
 
+![I &lt;3 mm!](screenshots/heart.png)
+
 Quickly understand your Lua data in a beautiful, tasty way.
 
 ![some delicious output from mm](screenshots/main.png)
