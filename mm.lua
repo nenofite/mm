@@ -286,17 +286,21 @@ end
 
 
 function translaters.string (val, ctx)
-  local result
   if #val <= MAX_STR_LEN then
-    result = string.format ('%q', val)
-  else
-    result = string.format ('%q...%q',
-      string.sub (val, 1, STR_HALF),
-      string.sub (val, -STR_HALF))
-  end
+    -- The string is short enough; display it all.
+    local a = string.format ('%q', val)
+    a = string.gsub (a, '\n', 'n')
 
-  result = string.gsub (result, '\n', 'n')
-  return { result, colors = C.g }
+    return { a, colors = C.g }
+  else
+    -- The string is too long. Only show the start and end.
+    local a = string.format ('%q', string.sub (val, 1, STR_HALF))
+    a = string.gsub (a, '\n', 'n')
+    local b = string.format ('%q', string.sub (val, -STR_HALF))
+    b = string.gsub (b, '\n', 'n')
+
+    return { a, { "...", colors = C.di }, b, colors = C.g, sep = '', tight = true }
+  end
 end
 
 
