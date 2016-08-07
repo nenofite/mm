@@ -8,7 +8,7 @@ Quickly understand your Lua data in a beautiful, tasty way.
 
 ## mm is not a serializer
 
-There already exist [many](1) [great](2) [serializers](3) for Lua, which do 
+There already exist [many][1] [great][2] [serializers][3] for Lua, which do 
 amazing jobs of displaying Lua values in nicely-indented Lua syntax while 
 handling messy tables, detecting cyclical references, and making you a cup of 
 coffee on the side. These tools output Lua syntax, so you can stick the result 
