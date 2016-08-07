@@ -6,6 +6,14 @@ Quickly understand your Lua data in a beautiful, tasty way.
 
 ![some delicious output from mm](screenshots/main.png)
 
+## Features
+
+- Human-friendly, color-coded names for cyclical and redundant references.
+- Syntax highlighting.
+- Indentation and wrapping to fit nicely in a terminal.
+- Easily extended to present custom data types.
+- 100% delicious.
+
 ## mm is not a serializer
 
 There already exist [many][1] [great][2] [serializers][3] for Lua, which do 
@@ -22,14 +30,6 @@ serializer.
 [1]: http://notebook.kulchenko.com/programming/serpent-lua-serializer-pretty-printer
 [2]: https://github.com/gvx/Ser
 [3]: http://lua-users.org/wiki/TableSerialization
-
-## Features
-
-- Human-friendly, color-coded names for cyclical and redundant references.
-- Syntax highlighting.
-- Indentation and wrapping to fit nicely in a terminal.
-- Easily extended to present custom data types.
-- 100% delicious.
 
 ## How to use mm
 
