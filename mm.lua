@@ -52,28 +52,24 @@ local BRACKETS = {
 local STR_HALF = 30
 local MAX_STR_LEN = STR_HALF * 2
 
--- Names to use for named references.
+-- Names to use for named references. The order is important; these are aligned 
+-- with the colors in `NAME_COLORS`.
 local NAMES = {
-  "Theodora",
-  "Lizzette",
-  "Eleanora",
-  "Alexandra",
-  "Dulce",
-  "Arletta",
-  "Vanna",
-  "Laurette",
-  "Tamara",
-  "Shonna",
-  "Ione",
-  "Ursula",
-  "Serena",
-  "Elza",
-  "Estrella",
-  "Jerrica",
-  "Ranae",
-  "Chieko",
-  "Terra",
-  "Candelaria"
+  "Cherry",
+  "Apple",
+  "Lemon",
+  "Blueberry",
+  "Jam",
+  "Cream",
+  "Rhubarb",
+  "Lime",
+  "Butter",
+  "Grape",
+  "Pomegranate",
+  "Sugar",
+  "Cinnamon",
+  "Avocado",
+  "Honey",
 }
 
 -- Colors to use for named references. Don't use black nor white.

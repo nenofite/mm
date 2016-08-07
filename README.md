@@ -23,7 +23,7 @@ serializer.
 
 ## Features
 
-- Human-friendly names for cyclical and redundant references.
+- Human-friendly, color-coded names for cyclical and redundant references.
 - Syntax highlighting.
 - Indentation and wrapping to fit nicely in a terminal.
 - Easily extended to present custom data types.
