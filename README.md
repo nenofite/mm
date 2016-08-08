@@ -6,6 +6,11 @@ Quickly understand your Lua data in a beautiful, tasty way.
 
 ![some delicious output from mm](screenshots/main.png)
 
+mm writes beautifully indented and color-coded representations of Lua data so 
+that you can quickly and clearly understand what's going on. mm doesn't bore 
+you with table memory addresses. Instead, mm gives each table a friendly, 
+memorable name, so you can instantly make sense of what points where.
+
 ## Features
 
 - Human-friendly, color-coded names for cyclical and redundant references.
@@ -31,11 +36,41 @@ serializer.
 [2]: https://github.com/gvx/Ser
 [3]: http://lua-users.org/wiki/TableSerialization
 
+## Install mm
+
+To install with LuaRocks:
+
+```sh
+$ sudo luarocks install mm
+```
+
+Or just copy and paste the file `mm.min.lua` into your Lua REPL for a quick 
+fix.
+
 ## How to use mm
 
-Simply pass the function any Lua value to have it printed. For a quick demo, 
-try:
+mm is easy to use; it's just one function. Simply pass the function any Lua 
+value to have it printed.
+
+For a one-line demo:
 
 ```lua
 require 'mm' (_G)
+```
+
+Some other fun things to try:
+
+```lua
+mm = require 'mm'
+
+a = { [{ "key" }] = "value" }
+a.a = a
+a.long_string = "ba" .. string.rep("na", 100)
+setmetatable(a, a)
+mm(a)
+
+mm(mm)
+
+f = function() end
+mm({ f, f, f })
 ```
