@@ -1,8 +1,8 @@
 package = "mm"
-version = "1.0.0-1"
+version = "1.1.0-1"
 source = {
    url = "git://github.com/nenofite/mm",
-   tag = "v1.0.0"
+   tag = "v1.1.0"
 }
 description = {
    summary = "A delicious Lua inspector",
