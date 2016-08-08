@@ -362,7 +362,7 @@ local function clean (piece, ctx)
         -- Named. Check whether the reference has a definition.
         if def then
           -- Create a sequence defining the name to the definition.
-          return { header, clean (piece.def, ctx) }
+          return { header, { "is", colors = C.di }, clean (piece.def, ctx) }
         else
           -- Show just the name.
           return header
