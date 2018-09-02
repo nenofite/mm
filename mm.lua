@@ -32,13 +32,22 @@ local C = {
   _w = '\27[47m'  -- white
 }
 
+-- If we're on Windows, set all colors to empty strings so we don't spam the
+-- output with meaningless escape codes.
+local ON_WINDOWS = string.find(package.path, '\\') ~= nil
+if ON_WINDOWS then
+  for k, v in pairs(C) do
+    C[k] = ''
+  end
+end
+
 local METATABLE = { "<metatable>", colors = C.it .. C.y }
 local INDENT = "   "
 
 -- The default sequence separator.
 local SEP = " "
 
--- The open and close brackets can be any piece (notably, a sequence with 
+-- The open and close brackets can be any piece (notably, a sequence with
 -- colors). The separator must be a plain string.
 local BOPEN, BSEP, BCLOSE = 1, 2, 3
 
@@ -52,7 +61,7 @@ local BRACKETS = {
 local STR_HALF = 30
 local MAX_STR_LEN = STR_HALF * 2
 
--- Names to use for named references. The order is important; these are aligned 
+-- Names to use for named references. The order is important; these are aligned
 -- with the colors in `NAME_COLORS`.
 local NAMES = {
   "Cherry",
@@ -164,20 +173,20 @@ end
 
 -- Translaters take any Lua value and create pieces to represent them.
 --
--- Some values should only be serialized once, both to prevent cycles and to 
--- prevent redundancy. Or in other cases, these values cannot be serialized 
--- (such as functions) but if they appear multiple times we want to express 
+-- Some values should only be serialized once, both to prevent cycles and to
+-- prevent redundancy. Or in other cases, these values cannot be serialized
+-- (such as functions) but if they appear multiple times we want to express
 -- that they are the same.
 --
--- When a translater encounters such a value for the first time, it is 
--- registered in the context in `occur`. The value is wrapped in a plain table 
--- with the `id` field pointing to the original value. If the value is 
--- serializable, such as a table, then the the `def` field contains the piece 
--- to display. If it is unserializable or it is not the first time this value 
+-- When a translater encounters such a value for the first time, it is
+-- registered in the context in `occur`. The value is wrapped in a plain table
+-- with the `id` field pointing to the original value. If the value is
+-- serializable, such as a table, then the the `def` field contains the piece
+-- to display. If it is unserializable or it is not the first time this value
 -- has occurred, the `def` field is nil.
 --
--- In the cleaning stage, these `id` fields are replaced with their names. If a 
--- `def` field is present, then a sequence is generated to define the name with 
+-- In the cleaning stage, these `id` fields are replaced with their names. If a
+-- `def` field is present, then a sequence is generated to define the name with
 -- the piece.
 
 local translaters = {}
@@ -263,7 +272,7 @@ function translaters.table (val, ctx)
 
     -- Represent the contents.
     for k, v in pairs (val) do
-      -- If it is a string key which can be represented without quotes, leave 
+      -- If it is a string key which can be represented without quotes, leave
       -- it plain.
       if ident_friendly (k) then
         -- Leave the key as it is.
@@ -309,11 +318,11 @@ function translaters.number (val, ctx)
 end
 
 
--- Check whether a value can be represented as a Lua identifier, without the 
+-- Check whether a value can be represented as a Lua identifier, without the
 -- need for quotes or translation.
 --
--- If the value is not a string, this immediately returns false. Otherwise, the 
--- string must be a valid Lua name: a sequence of letters, digits, and 
+-- If the value is not a string, this immediately returns false. Otherwise, the
+-- string must be a valid Lua name: a sequence of letters, digits, and
 -- underscores that doesn't start with a digit and isn't a reserved keyword.
 --
 -- See http://www.lua.org/manual/5.3/manual.html#3.1
@@ -411,7 +420,7 @@ end
 --
 
 
--- Pieces are either frames (with brackets), sequences (no brackets), or 
+-- Pieces are either frames (with brackets), sequences (no brackets), or
 -- strings.
 
 -- Frames are displayed either short-form as { a = 1 } or long-form as
@@ -422,7 +431,7 @@ end
 
 -- Declare all the local functions first, so they can refer to each other.
 local min_len, display, display_frame, display_sequence, display_string,
-      display_frame_short, display_frame_long, newline, newline_no_indent, 
+      display_frame_short, display_frame_long, newline, newline_no_indent,
       write, write_nolength, space_here, space_newline
 
 
@@ -472,7 +481,7 @@ end
 
 
 function display_frame_short (frame, ctx)
-  -- Short-form frames never wrap onto new lines, so we don't need to do any 
+  -- Short-form frames never wrap onto new lines, so we don't need to do any
   -- length checking (it's already been done for us).
 
   -- Write the open bracket.
@@ -558,7 +567,7 @@ function display_sequence (piece, ctx)
       -- Try to fit the entire sequence on one line.
       local ml = min_len (piece, ctx)
 
-      -- If it won't fit here, but it would fit on the next line, then write it 
+      -- If it won't fit here, but it would fit on the next line, then write it
       -- on the next line; otherwise, write it here.
       if ml > space_here (ctx) and ml <= space_newline (ctx) then
         newline (ctx)
@@ -600,7 +609,7 @@ end
 function display_string (piece, ctx)
   local ml = min_len (piece)
 
-  -- If it won't fit here, but it would fit on the next line, then write it on 
+  -- If it won't fit here, but it would fit on the next line, then write it on
   -- the next line; otherwise, write it here.
   if ml > space_here (ctx) and ml <= space_newline (ctx) then
     newline (ctx)
